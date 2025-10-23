@@ -1,0 +1,38 @@
+# ===============================================================
+# .gitignore para un Proyecto Spring Boot + Maven
+# ===============================================================
+
+# Archivos compilados por Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+build-number.properties
+
+# Logs
+*.log
+logs/
+
+# Archivos del IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.vscode/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos generados por builds
+/build/
+
+# Archivos de entorno local (¡MUY IMPORTANTE!)
+# Si usas un archivo .env para tus secretos, ignóralo.
+.env
