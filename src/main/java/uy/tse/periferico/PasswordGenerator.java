@@ -18,7 +18,7 @@ public class PasswordGenerator implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String rawPassword = "password123";
+        String rawPassword = "adminpass456";
         String hashedPassword = passwordEncoder.encode(rawPassword);
 
         System.out.println("====================================================================");

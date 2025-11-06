@@ -31,10 +31,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configurar CORS apropiadamente en producción
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/{tenantId}/api/auth/login", "/{tenantId}/api/config").permitAll()
+                // Rutas públicas: cualquiera puede acceder a los logins y a la config
+                .requestMatchers("/{tenantId}/api/auth/login/**", "/{tenantId}/api/config").permitAll()
+
+                // Rutas de Administrador: solo quienes tengan la autoridad 'ROLE_ADMIN'
+                .requestMatchers("/{tenantId}/api/admin/**").hasAuthority("ROLE_ADMIN")
+                
+                // Rutas de Documentos: quienes tengan 'ROLE_PROFESIONAL' O 'ROLE_SYSTEM'
+                .requestMatchers("/{tenantId}/api/documentos/**").hasAnyAuthority("ROLE_PROFESIONAL", "ROLE_SYSTEM")
+
+                // Para cualquier otra ruta que no coincida, solo se requiere estar autenticado
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

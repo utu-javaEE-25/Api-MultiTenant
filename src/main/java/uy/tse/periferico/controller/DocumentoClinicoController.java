@@ -17,10 +17,10 @@ public class DocumentoClinicoController {
 
     private final DocumentoClinicoService documentoClinicoService;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<DocumentoClinicoDTO> getDocumentoClinicoById(@PathVariable String tenantId,@PathVariable Long id) {
+    @GetMapping("/{idExternaDoc}")
+    public ResponseEntity<DocumentoClinicoDTO> getDocumentoByIdExterna(@PathVariable String idExternaDoc) {
         
-        DocumentoClinicoDTO documento = documentoClinicoService.findDocumentoById(id);
+        DocumentoClinicoDTO documento = documentoClinicoService.findDocumentoByIdExterna(idExternaDoc);
         return ResponseEntity.ok(documento);
     }
 }

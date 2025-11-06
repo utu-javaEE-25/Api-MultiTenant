@@ -17,12 +17,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 public class AuthController {
     private final AutenticacionService autenticacionService;
 
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@PathVariable String tenantId, @RequestBody LoginRequest loginRequest) {
-
-        String token = autenticacionService.login(loginRequest,tenantId);
+    // Renombrado para mayor claridad (de /login a /login/profesional)
+    @PostMapping("/login/profesional")
+    public ResponseEntity<LoginResponse> loginProfesional(@PathVariable String tenantId, @RequestBody LoginRequest loginRequest) {
+        String token = autenticacionService.loginProfesional(loginRequest, tenantId);
         return ResponseEntity.ok(new LoginResponse(token));
-         
+    }
+    
+    // --- NUEVO ENDPOINT PARA EL LOGIN DEL ADMINISTRADOR ---
+    @PostMapping("/login/admin")
+    public ResponseEntity<LoginResponse> loginAdmin(@PathVariable String tenantId, @RequestBody LoginRequest loginRequest) {
+        // Llama a la nueva función del servicio
+        String token = autenticacionService.loginAdmin(loginRequest, tenantId);
+        // Devuelve el token en la respuesta
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 }
 

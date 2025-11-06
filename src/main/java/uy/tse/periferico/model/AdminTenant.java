@@ -5,30 +5,24 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "profesional", uniqueConstraints = { 
-    @UniqueConstraint(columnNames = {"nombre_usuario"}) 
-})
-@Data
-@NoArgsConstructor
-public class Profesional {
+@Table(name = "admin_tenant")
+@Data 
+@NoArgsConstructor 
+public class AdminTenant {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "profesional_id") 
+    @Column(name = "admin_id")
     private Long id;
 
-    @Column(name = "nombre_usuario", nullable = false, unique = true)
-    private String username; 
+    @Column(name = "nombre_usuario", unique = true, nullable = false)
+    private String nombreUsuario;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false)
     private String nombre;
-
-    @Column(nullable = false)
     private String apellido;
-
-    private String especializacion;
     private String email;
     private String estado;
 }

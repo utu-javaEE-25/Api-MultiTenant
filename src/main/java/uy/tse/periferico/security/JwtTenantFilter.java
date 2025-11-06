@@ -9,12 +9,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority; 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import uy.tse.periferico.config.TenantContext;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List; 
 
 @Component
 @RequiredArgsConstructor
@@ -28,24 +31,19 @@ public class JwtTenantFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Extraer el tenantId de la URL usando nuestro método auxiliar
         String tenantIdFromUrl = extractTenantIdFromRequest(request);
 
-        // Si la URL no tiene el formato esperado (ej: /tenant/api/...), es una petición inválida.
         if (tenantIdFromUrl == null) {
-            // Excepción: la URL de login NO necesita token pero SÍ tenant en la URL.
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            //Establecer el contexto del tenant INMEDIATAMENTE.
             TenantContext.setCurrentTenant(tenantIdFromUrl);
             
             final String authHeader = request.getHeader("Authorization");
 
-            // Caso especial: la URL de login. No requiere token, así que la dejamos continuar.
-            if (request.getRequestURI().endsWith("/api/auth/login")) {
+            if (request.getRequestURI().contains("/api/auth/login")) { 
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -60,6 +58,12 @@ public class JwtTenantFilter extends OncePerRequestFilter {
             Claims claims = jwtTokenProvider.validateAndGetClaims(token);
             String username = claims.getSubject();
             String tenantIdFromToken = claims.get("tenant_id", String.class);
+            
+            String rol = claims.get("rol", String.class);
+
+            List<GrantedAuthority> authorities = rol != null ?
+                    List.of(new SimpleGrantedAuthority("ROLE_" + rol)) :
+                    Collections.emptyList();
 
             if (tenantIdFromToken == null || !tenantIdFromToken.equals(tenantIdFromUrl)) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -70,7 +74,7 @@ public class JwtTenantFilter extends OncePerRequestFilter {
             String principal = (username != null) ? username : tenantIdFromToken;
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    principal, null, Collections.emptyList());
+                    principal, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
             
             filterChain.doFilter(request, response);
@@ -82,7 +86,6 @@ public class JwtTenantFilter extends OncePerRequestFilter {
             TenantContext.clear();
         }
     }
-
     
     private String extractTenantIdFromRequest(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
