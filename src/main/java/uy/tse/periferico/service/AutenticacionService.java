@@ -32,7 +32,7 @@ public class AutenticacionService {
             throw new BadCredentialsException("Contraseña incorrecta para el profesional.");
         }
 
-        return jwtTokenProvider.generateToken(profesional.getUsername(), tenantId, "PROFESIONAL");
+        return jwtTokenProvider.generateToken(profesional.getUsername(), profesional.getId(), tenantId, "PROFESIONAL");
     }
 
     public String loginAdmin(LoginRequest loginRequest, String tenantId) {
@@ -45,6 +45,6 @@ public class AutenticacionService {
             throw new BadCredentialsException("Contraseña incorrecta para el administrador.");
         }
 
-        return jwtTokenProvider.generateToken(admin.getNombreUsuario(), tenantId, "ADMIN");
+        return jwtTokenProvider.generateToken(admin.getNombreUsuario(), null, tenantId, "ADMIN");
     }
 }

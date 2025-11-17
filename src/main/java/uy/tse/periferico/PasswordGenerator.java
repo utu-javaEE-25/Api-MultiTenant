@@ -22,7 +22,7 @@ public class PasswordGenerator implements CommandLineRunner {
         String hashedPassword = passwordEncoder.encode(rawPassword);
 
         System.out.println("====================================================================");
-        System.out.println("NUEVO HASH BCrypt GARANTIZADO para 'password123':");
+        System.out.println("NUEVO HASH BCrypt GARANTIZADO para 'password123': pruba 9/11");
         System.out.println(hashedPassword);
         System.out.println("====================================================================");
     }

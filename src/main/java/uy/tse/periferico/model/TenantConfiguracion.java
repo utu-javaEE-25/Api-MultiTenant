@@ -13,7 +13,7 @@ public class TenantConfiguracion {
     @Column(name = "config_id")
     private Long id;
 
-    @Column(name = "logourl")
+    @Column(name = "logourl", columnDefinition = "TEXT")
     private String logoUrl;
 
     @Column(name = "nombre_visible")

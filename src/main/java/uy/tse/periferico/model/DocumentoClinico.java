@@ -2,6 +2,8 @@ package uy.tse.periferico.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode; 
+import org.hibernate.type.SqlTypes;   
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
@@ -39,12 +41,15 @@ public class DocumentoClinico {
     private LocalDateTime fechaAtencionFin;
 
     // Usaremos JSONB para almacenar datos estructurados de forma flexible
+     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String motivos; // Contendrá un JSON array de motivos
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String diagnosticos; // Contendrá un JSON array de diagnósticos
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String instrucciones; // Contendrá un JSON array de instrucciones
     

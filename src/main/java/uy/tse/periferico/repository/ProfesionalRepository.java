@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface ProfesionalRepository extends JpaRepository<Profesional, Long> {
     Optional<Profesional> findByUsername(String username);
+    Optional<Profesional> findByEmail(String email);
 }

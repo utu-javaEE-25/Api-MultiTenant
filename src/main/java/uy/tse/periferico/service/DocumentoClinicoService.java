@@ -1,28 +1,104 @@
 package uy.tse.periferico.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uy.tse.periferico.dto.DocumentoMetadataMensajeDTO; 
+import uy.tse.periferico.dto.DocumentoClinicoCreateDTO; // Importar el nuevo DTO
 import uy.tse.periferico.dto.DocumentoClinicoDTO;
 import uy.tse.periferico.exception.ResourceNotFoundException;
 import uy.tse.periferico.model.DocumentoClinico;
+import uy.tse.periferico.model.Paciente; // Importar Paciente
+import uy.tse.periferico.model.Profesional; // Importar Profesional
 import uy.tse.periferico.repository.DocumentoClinicoRepository;
+import uy.tse.periferico.repository.PacienteRepository; // Importar PacienteRepository
+import uy.tse.periferico.repository.ProfesionalRepository; // Importar ProfesionalRepository
 import uy.tse.periferico.repository.TenantConfiguracionRepository;
 import uy.tse.periferico.model.TenantConfiguracion;
+
+import java.time.LocalDateTime; // Importar LocalDateTime
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class DocumentoClinicoService {
 
     private final DocumentoClinicoRepository repository;
+    private final PacienteRepository pacienteRepository; // Añadir dependencia
+    private final ProfesionalRepository profesionalRepository;
     private final TenantConfiguracionRepository configRepository;
     private final ObjectMapper objectMapper; // Spring Boot inyecta un ObjectMapper por defecto
+    private final HcenRestNotifierService notifierService;
+
+
+
+    @Transactional
+    public DocumentoClinicoDTO createDocumento(DocumentoClinicoCreateDTO createDTO, String profesionalUsername, String tenantId) {
+        // 1. Buscar las entidades relacionadas
+        Paciente paciente = pacienteRepository.findById(createDTO.getPacienteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado con ID: " + createDTO.getPacienteId()));
+        Profesional profesional = profesionalRepository.findByUsername(profesionalUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado: " + profesionalUsername));
+
+        // 2. Crear la nueva entidad DocumentoClinico
+        DocumentoClinico nuevoDoc = new DocumentoClinico();
+        nuevoDoc.setPaciente(paciente);
+        nuevoDoc.setProfesional(profesional);
+
+        // Generar un ID externo único
+        nuevoDoc.setIdExternaDoc("DOC-" + tenantId.toUpperCase() + "-" + UUID.randomUUID().toString().substring(0, 8));
+
+        // Mapear datos directos
+        nuevoDoc.setInstanciaMedica(createDTO.getInstanciaMedica());
+        nuevoDoc.setLugar(createDTO.getLugar());
+        nuevoDoc.setFechaAtencionInicio(createDTO.getFechaAtencionInicio());
+        nuevoDoc.setFechaAtencionFin(createDTO.getFechaAtencionFin());
+        nuevoDoc.setFechaCreacion(LocalDateTime.now());
+
+        // 3. Serializar los campos JSONB
+        try {
+            nuevoDoc.setMotivos(objectMapper.writeValueAsString(createDTO.getMotivos()));
+            nuevoDoc.setDiagnosticos(objectMapper.writeValueAsString(createDTO.getDiagnosticos()));
+            nuevoDoc.setInstrucciones(objectMapper.writeValueAsString(createDTO.getInstrucciones()));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error al serializar los datos del documento a JSON", e);
+        }
+
+        // 4. Guardar y devolver el DTO
+        DocumentoClinico docGuardado = repository.save(nuevoDoc);
+
+        try {
+            DocumentoMetadataMensajeDTO mensajeDTO = new DocumentoMetadataMensajeDTO();
+            mensajeDTO.setPacienteGlobalId(docGuardado.getPaciente().getGlobalUserId());
+            mensajeDTO.setTenantSchemaName(tenantId);
+            mensajeDTO.setIdExternaDoc(docGuardado.getIdExternaDoc());
+            mensajeDTO.setTipoDocumento(docGuardado.getInstanciaMedica());
+
+            // Llamada síncrona al servicio de notificación
+            notifierService.notificarNuevoDocumento(mensajeDTO);
+
+        } catch (Exception e) {
+            // Si la notificación falla, simplemente imprimimos una advertencia en la consola
+            // pero no detenemos la operación. El documento ya se guardó localmente.
+            System.err.println("ADVERTENCIA: El documento se creó localmente, pero la notificación REST a HCEN falló. " +
+                               "El metadato no se registrará en el sistema central. Causa: " + e.getMessage());
+        }
+        
+        TenantConfiguracion config = configRepository.findById(1).orElse(new TenantConfiguracion());
+
+        try {
+            return mapToDTO(docGuardado, config.getTituloPrincipal());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al mapear el documento guardado a DTO", e);
+        }
+    }
 
     @Transactional(readOnly = true)
     public DocumentoClinicoDTO findDocumentoByIdExterna(String idExterna) {

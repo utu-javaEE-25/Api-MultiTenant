@@ -31,22 +31,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(authz -> authz
-                // Rutas públicas: cualquiera puede acceder a los logins y a la config
-                .requestMatchers("/{tenantId}/api/auth/login/**", "/{tenantId}/api/config").permitAll()
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(authz -> authz
+                        // --- PASO 1: Definir las rutas públicas PRIMERO ---
+                        .requestMatchers("/{tenantId}/api/auth/login/**", "/{tenantId}/api/config").permitAll()
 
-                // Rutas de Administrador: solo quienes tengan la autoridad 'ROLE_ADMIN'
-                .requestMatchers("/{tenantId}/api/admin/**").hasAuthority("ROLE_ADMIN")
-                
-                // Rutas de Documentos: quienes tengan 'ROLE_PROFESIONAL' O 'ROLE_SYSTEM'
-                .requestMatchers("/{tenantId}/api/documentos/**").hasAnyAuthority("ROLE_PROFESIONAL", "ROLE_SYSTEM")
+                        // --- PASO 2: Definir las rutas de ADMIN ---
+                        // Usamos hasRole("ADMIN") por consistencia. Es igual a hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/{tenantId}/api/admin/**").hasRole("ADMIN")
 
-                // Para cualquier otra ruta que no coincida, solo se requiere estar autenticado
-                .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                        // --- PASO 3: Definir las rutas de PROFESIONAL ---
+                        // Ruta para que el profesional edite su propio perfil
+                        .requestMatchers("/{tenantId}/api/auth/perfil").hasRole("PROFESIONAL")
+
+                        // Ruta para que el profesional vea documentos
+                        .requestMatchers("/{tenantId}/api/pacientes/**").hasRole("PROFESIONAL")
+                        .requestMatchers("/{tenantId}/api/documentos/**").hasAnyRole("PROFESIONAL", "SYSTEM")
+
+                        // --- PASO 4: La regla más general, AL FINAL ---
+                        // Cualquier otra petición que no haya coincidido antes, requiere autenticación.
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.addFilterBefore(jwtTenantFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -54,18 +61,23 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration configuration = new CorsConfiguration();
-    // Permitir peticiones desde tu frontend de React
-    configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-    // Permitir los métodos HTTP que usará tu frontend
-    configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    // Permitir las cabeceras que enviará tu frontend
-    configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-    
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    // Aplicar esta configuración a TODAS las rutas de tu API
-    source.registerCorsConfiguration("/**", configuration);
-    return source;
-}
+        CorsConfiguration configuration = new CorsConfiguration();
+        // 1. Orígenes permitidos (tu frontend)
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("https://front-multitenant.vercel.app"));
+
+        // 2. Métodos permitidos
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // 3. Cabeceras permitidas (usar "*" es más seguro para desarrollo)
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        // 4. Permitir credenciales (importante para tokens y cookies)
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
 

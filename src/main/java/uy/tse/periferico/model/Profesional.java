@@ -30,5 +30,6 @@ public class Profesional {
 
     private String especializacion;
     private String email;
-    private String estado;
+    @Column(nullable = false)
+    private String estado = "ACTIVO";
 }

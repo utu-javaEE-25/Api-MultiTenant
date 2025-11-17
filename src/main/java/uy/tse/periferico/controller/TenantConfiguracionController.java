@@ -2,30 +2,43 @@ package uy.tse.periferico.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import uy.tse.periferico.config.TenantContext;
+import uy.tse.periferico.dto.TenantConfigUpdateDTO;
 import uy.tse.periferico.model.TenantConfiguracion;
 import uy.tse.periferico.service.TenantConfiguracionService;
 
 @RestController
-@RequestMapping("/{tenantId}/api/config")
+@RequestMapping("/{tenantId}/api") // CAMBIO 1: La ruta base ahora es más genérica
 @RequiredArgsConstructor
 public class TenantConfiguracionController {
 
     private final TenantConfiguracionService configService;
 
-    @GetMapping
+    // La ruta final es: /{tenantId}/api/config
+    @GetMapping("/config")
     public ResponseEntity<TenantConfiguracion> getTenantConfig(@PathVariable String tenantId) {
-        // IMPORTANTE: Establecemos el contexto del tenant ANTES de llamar al servicio
         TenantContext.setCurrentTenant(tenantId);
         try {
             TenantConfiguracion config = configService.getConfiguration();
             return ResponseEntity.ok(config);
         } finally {
-            // Y nos aseguramos de limpiarlo después
+            TenantContext.clear();
+        }
+    }
+
+    // CAMBIO 2: La ruta del método PUT ahora coincide con /admin/config
+    // La ruta final es: /{tenantId}/api/admin/config <-- ¡CORRECTA!
+    @PutMapping("/admin/config")
+    public ResponseEntity<TenantConfiguracion> updateTenantConfig(
+            @PathVariable String tenantId,
+            @RequestBody TenantConfigUpdateDTO updateDTO) {
+
+        TenantContext.setCurrentTenant(tenantId);
+        try {
+            TenantConfiguracion updatedConfig = configService.updateConfiguration(updateDTO);
+            return ResponseEntity.ok(updatedConfig);
+        } finally {
             TenantContext.clear();
         }
     }
