@@ -1,5 +1,6 @@
 package uy.tse.periferico.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -15,10 +16,24 @@ public class HcenAccesoService {
     @Value("${central.api.url.solicitud-acceso}")
     private String hcenApiUrl;
 
-    public String solicitarAcceso(SolicitudAccesoRequestDTO dto) {
+    @Autowired
+    private NotificationService notificationService;
+
+    public String solicitarAcceso(SolicitudAccesoRequestDTO dto, String profesionalUsername) {
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(hcenApiUrl, dto, String.class);
+
+            // Notificación al profesional solicitante
+            notificationService.crearYEnviarNotificacion(
+                    profesionalUsername,
+                    "Solicitud de acceso enviada",
+                    "Se envió una solicitud de acceso para la historia clínica del paciente: "
+                            + dto.getCedulaPaciente(),
+                    "SOLICITUD_ACCESO",
+                    null);
+
             return response.getBody();
+
         } catch (HttpClientErrorException e) {
             throw new RuntimeException("HCEN rechazó la solicitud: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
