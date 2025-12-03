@@ -79,12 +79,14 @@ public class ProfesionalService {
     // --- BAJA (DELETE FÍSICO / HARD DELETE) ---
     @Transactional
     public void deleteProfesional(Long id) {
-        // 1. Primero, verificamos si el profesional existe para lanzar una excepción clara si no.
+        // 1. Primero, verificamos si el profesional existe para lanzar una excepción
+        // clara si no.
         if (!profesionalRepository.existsById(id)) {
             throw new ResourceNotFoundException("Profesional no encontrado con id: " + id);
         }
         // 2. Si existe, lo borra permanentemente de la base de datos.
-        // ADVERTENCIA: Esto puede fallar si el profesional tiene registros asociados (ej. Documentos Clínicos)
+        // ADVERTENCIA: Esto puede fallar si el profesional tiene registros asociados
+        // (ej. Documentos Clínicos)
         // y no hay una estrategia de borrado en cascada configurada.
         profesionalRepository.deleteById(id);
     }
@@ -105,9 +107,9 @@ public class ProfesionalService {
                 .collect(Collectors.toList());
     }
 
-
     // --- Mapeador privado de Entidad a DTO ---
-    // Convierte un objeto de la base de datos (Profesional) a un objeto de transferencia de datos (ProfesionalDTO)
+    // Convierte un objeto de la base de datos (Profesional) a un objeto de
+    // transferencia de datos (ProfesionalDTO)
     // que se enviará al frontend.
     private ProfesionalDTO mapToDTO(Profesional profesional) {
         ProfesionalDTO dto = new ProfesionalDTO();
@@ -125,7 +127,8 @@ public class ProfesionalService {
     @Transactional(readOnly = true)
     public ProfesionalDTO findProfesionalByEmail(String email) {
         Profesional profesional = profesionalRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("No se encontró un profesional con el email: " + email));
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("No se encontró un profesional con el email: " + email));
         return mapToDTO(profesional);
     }
 
@@ -154,10 +157,37 @@ public class ProfesionalService {
     public ProfesionalDTO getProfileByUsername(String username) {
         // 1. Busca la entidad Profesional en la base de datos por su username.
         Profesional profesional = profesionalRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de profesional no encontrado para el usuario: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Perfil de profesional no encontrado para el usuario: " + username));
 
-        // 2. Reutiliza tu método mapToDTO para convertir la entidad al DTO que necesita el frontend.
+        // 2. Reutiliza tu método mapToDTO para convertir la entidad al DTO que necesita
+        // el frontend.
         return mapToDTO(profesional);
+    }
+
+    // --- Mapeador público de Entidad a DTO ---
+    public ProfesionalDTO toDTO(Profesional profesional) {
+        ProfesionalDTO dto = new ProfesionalDTO();
+
+        dto.setId(profesional.getId());
+        dto.setUsername(profesional.getUsername());
+        dto.setNombre(profesional.getNombre());
+        dto.setApellido(profesional.getApellido());
+        dto.setEspecializacion(profesional.getEspecializacion());
+        dto.setEmail(profesional.getEmail());
+
+        // Como Profesional NO tiene rol, lo dejamos null (o setealo a un valor fijo si
+        // querés)
+        dto.setRol(null);
+
+        // Mapear estado (si existe)
+        if (profesional.getEstado() != null) {
+            dto.setEstado(profesional.getEstado().toString());
+        } else {
+            dto.setEstado(null);
+        }
+
+        return dto;
     }
 
 }

@@ -3,64 +3,84 @@ package uy.tse.periferico.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import uy.tse.periferico.dto.LoginRequest;
 import uy.tse.periferico.dto.LoginResponse;
-import uy.tse.periferico.model.Paciente;
-import uy.tse.periferico.service.AutenticacionService;
-import org.springframework.web.bind.annotation.PathVariable;
-import uy.tse.periferico.service.ImportacionPacienteService;
-import uy.tse.periferico.service.ProfesionalService;
 import uy.tse.periferico.dto.ProfesionalDTO;
-import org.springframework.web.bind.annotation.PutMapping;
 import uy.tse.periferico.dto.ProfesionalProfileUpdateDTO;
+import uy.tse.periferico.dto.MobileLoginResponse;
+
+import uy.tse.periferico.model.Paciente;
+
+import uy.tse.periferico.service.AutenticacionService;
+import uy.tse.periferico.service.ProfesionalService;
+import uy.tse.periferico.service.ImportacionPacienteService;
+import uy.tse.periferico.service.MobileAuthService;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping; // ¡Añade este import!
-
-
 
 @RestController
 @RequestMapping("/{tenantId}/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
     private final AutenticacionService autenticacionService;
     private final ProfesionalService profesionalService;
     private final ImportacionPacienteService importacionService;
+    private final MobileAuthService mobileAuthService;
 
-    // Renombrado para mayor claridad (de /login a /login/profesional)
+    // LOGIN PROFESIONAL (WEB Y MOBILE)
     @PostMapping("/login/profesional")
-    public ResponseEntity<LoginResponse> loginProfesional(@PathVariable String tenantId, @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> loginProfesional(
+            @PathVariable String tenantId,
+            @RequestBody LoginRequest loginRequest) {
+        String username = loginRequest.getUsername();
+
+        // Login normal → devuelve token
         String token = autenticacionService.loginProfesional(loginRequest, tenantId);
-        return ResponseEntity.ok(new LoginResponse(token));
-    }
-    
-    // --- NUEVO ENDPOINT PARA EL LOGIN DEL ADMINISTRADOR ---
-    @PostMapping("/login/admin")
-    public ResponseEntity<LoginResponse> loginAdmin(@PathVariable String tenantId, @RequestBody LoginRequest loginRequest) {
-        // Llama a la nueva función del servicio
-        String token = autenticacionService.loginAdmin(loginRequest, tenantId);
-        // Devuelve el token en la respuesta
+
+        // Si viene de MOBILE → devolvemos mobileAuthCode (no token directo)
+        if ("mobile".equalsIgnoreCase(loginRequest.getOrigin())) {
+            String mobileCode = mobileAuthService.generateMobileAuthCode(username);
+            return ResponseEntity.ok(new MobileLoginResponse(mobileCode));
+        }
+
+        // Login WEB normal
         return ResponseEntity.ok(new LoginResponse(token));
     }
 
+    // LOGIN ADMIN
+    @PostMapping("/login/admin")
+    public ResponseEntity<LoginResponse> loginAdmin(
+            @PathVariable String tenantId,
+            @RequestBody LoginRequest loginRequest) {
+        String token = autenticacionService.loginAdmin(loginRequest, tenantId);
+        return ResponseEntity.ok(new LoginResponse(token));
+    }
+
+    // ACTUALIZAR PERFIL
     @PutMapping("/perfil")
-    public ResponseEntity<ProfesionalDTO> updateOwnProfile(@AuthenticationPrincipal String username, @RequestBody ProfesionalProfileUpdateDTO updateDTO) {
+    public ResponseEntity<ProfesionalDTO> updateOwnProfile(
+            @AuthenticationPrincipal String username,
+            @RequestBody ProfesionalProfileUpdateDTO updateDTO) {
         ProfesionalDTO profesionalActualizado = profesionalService.updateOwnProfile(username, updateDTO);
         return ResponseEntity.ok(profesionalActualizado);
     }
 
+    // VER PERFIL
     @GetMapping("/perfil")
-    public ResponseEntity<ProfesionalDTO> getOwnProfile(@AuthenticationPrincipal String username) {
-        // Asumo que tienes un método en tu servicio para obtener el perfil por username
+    public ResponseEntity<ProfesionalDTO> getOwnProfile(
+            @AuthenticationPrincipal String username) {
         ProfesionalDTO profesional = profesionalService.getProfileByUsername(username);
         return ResponseEntity.ok(profesional);
     }
 
+    // IMPORTAR PACIENTE
     @PostMapping("/admin/importar-paciente/{cedula}")
-    public ResponseEntity<?> importarPaciente(@PathVariable String tenantId, @PathVariable String cedula) {
+    public ResponseEntity<?> importarPaciente(
+            @PathVariable String tenantId,
+            @PathVariable String cedula) {
         try {
             Paciente pacienteImportado = importacionService.importarPacientePorCI(cedula);
             return new ResponseEntity<>(pacienteImportado, HttpStatus.CREATED);
@@ -69,4 +89,3 @@ public class AuthController {
         }
     }
 }
-

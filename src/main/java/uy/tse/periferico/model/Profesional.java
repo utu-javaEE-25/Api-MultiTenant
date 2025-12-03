@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
-@Table(name = "profesional", uniqueConstraints = { 
-    @UniqueConstraint(columnNames = {"nombre_usuario"}) 
+@Table(name = "profesional", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "nombre_usuario" })
 })
 @Data
 @NoArgsConstructor
@@ -14,11 +16,12 @@ public class Profesional {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "profesional_id") 
+    @Column(name = "profesional_id")
     private Long id;
 
     @Column(name = "nombre_usuario", nullable = false, unique = true)
-    private String username; 
+    private String username;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
@@ -29,7 +32,12 @@ public class Profesional {
     private String apellido;
 
     private String especializacion;
+
     private String email;
+
     @Column(nullable = false)
     private String estado = "ACTIVO";
+
+    @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<MobileDeviceToken> dispositivos;
 }

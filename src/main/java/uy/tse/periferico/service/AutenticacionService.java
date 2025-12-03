@@ -5,9 +5,11 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import uy.tse.periferico.dto.LoginRequest;
 import uy.tse.periferico.model.AdminTenant;
 import uy.tse.periferico.model.Profesional;
+
 import uy.tse.periferico.repository.AdminTenantRepository;
 import uy.tse.periferico.repository.ProfesionalRepository;
 import uy.tse.periferico.security.JwtTokenProvider;
@@ -22,8 +24,8 @@ public class AutenticacionService {
     private final JwtTokenProvider jwtTokenProvider;
 
     public String loginProfesional(LoginRequest loginRequest, String tenantId) {
-        String username = loginRequest.getUsername();
 
+        String username = loginRequest.getUsername();
 
         Profesional profesional = profesionalRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario profesional no encontrado: " + username));
@@ -32,10 +34,15 @@ public class AutenticacionService {
             throw new BadCredentialsException("Contraseña incorrecta para el profesional.");
         }
 
-        return jwtTokenProvider.generateToken(profesional.getUsername(), profesional.getId(), tenantId, "PROFESIONAL");
+        return jwtTokenProvider.generateToken(
+                profesional.getUsername(),
+                profesional.getId(),
+                tenantId,
+                "PROFESIONAL");
     }
 
     public String loginAdmin(LoginRequest loginRequest, String tenantId) {
+
         String username = loginRequest.getUsername();
 
         AdminTenant admin = adminTenantRepository.findByNombreUsuario(username)
@@ -45,6 +52,10 @@ public class AutenticacionService {
             throw new BadCredentialsException("Contraseña incorrecta para el administrador.");
         }
 
-        return jwtTokenProvider.generateToken(admin.getNombreUsuario(), null, tenantId, "ADMIN");
+        return jwtTokenProvider.generateToken(
+                admin.getNombreUsuario(),
+                null,
+                tenantId,
+                "ADMIN");
     }
 }

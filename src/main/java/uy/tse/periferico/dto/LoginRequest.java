@@ -1,12 +1,12 @@
 package uy.tse.periferico.dto;
 
-
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data @NoArgsConstructor
+@Data
 public class LoginRequest {
     private String username;
     private String password;
-}
 
+    // Campo para distinguir login WEB vs MOBILE
+    private String origin;
+}
